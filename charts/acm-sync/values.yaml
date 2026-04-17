@@ -31,6 +31,13 @@ serviceAccount:
 #         secretKeyRef:
 #           name: aws-creds
 #           key: secret-access-key
+# Extra labels added to the pod template.
+# Example: podLabels: { metrics: enabled }
+podLabels: {}
+
+# Extra annotations added to the pod template.
+podAnnotations: {}
+
 extraEnv: []
 
 # Extra volume mounts for the controller container.
@@ -85,3 +92,14 @@ serviceMonitor:
   interval: 30s
   scrapeTimeout: 10s
   labels: {}
+
+grafanaDashboard:
+  enabled: false
+  # Namespace where the dashboard ConfigMap is created.
+  # Defaults to the release namespace. Set this to the namespace where
+  # Grafana is deployed if using the sidecar dashboard provisioner.
+  namespace: ""
+  # Labels for the ConfigMap. The Grafana sidecar typically watches for
+  # a specific label (e.g., grafana_dashboard: "1").
+  labels:
+    grafana_dashboard: "1"

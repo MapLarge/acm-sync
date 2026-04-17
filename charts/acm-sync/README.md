@@ -256,8 +256,13 @@ helm install acm-sync oci://ghcr.io/maplarge/charts/acm-sync \
 | `nodeSelector` | `{}` | Node selector |
 | `tolerations` | `[]` | Tolerations |
 | `affinity` | `{}` | Affinity rules |
+| `podLabels` | `{}` | Extra labels added to the pod template |
+| `podAnnotations` | `{}` | Extra annotations added to the pod template |
 | `extraEnv` | `[]` | Extra environment variables for the controller (e.g., AWS credentials for non-EKS clusters) |
 | `extraVolumeMounts` | `[]` | Extra volume mounts for the controller container |
 | `extraVolumes` | `[]` | Extra volumes for the pod |
 | `serviceMonitor.enabled` | `false` | Create a Prometheus ServiceMonitor |
 | `serviceMonitor.interval` | `30s` | Scrape interval |
+| `grafanaDashboard.enabled` | `false` | Create a ConfigMap with the Grafana dashboard JSON |
+| `grafanaDashboard.namespace` | `""` (release namespace) | Namespace for the dashboard ConfigMap |
+| `grafanaDashboard.labels` | `grafana_dashboard: "1"` | Labels for Grafana sidecar discovery |
