@@ -1,7 +1,8 @@
-# Version to package
-VERSION = 0.0.1
+# Version is derived from Chart.yaml as the single source of truth.
+# Override with: make build IMG=myregistry/acm-sync:mytag
+VERSION ?= $(shell grep '^version:' charts/acm-sync/Chart.yaml | awk '{print $$2}')
 # Image URL to use all building/pushing image targets
-IMG ?= ghcr.io/maplarge/acm-sync:latest
+IMG ?= ghcr.io/maplarge/acm-sync:$(VERSION)
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
