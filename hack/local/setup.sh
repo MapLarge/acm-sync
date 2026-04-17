@@ -173,8 +173,8 @@ full_setup() {
         values_file="$AWS_VALUES"
         creds_secret="aws-creds"
     else
-        log "Mode: LocalStack"
-        log "Starting LocalStack"
+        log "Mode: Moto (mock AWS)"
+        log "Starting Moto"
         docker compose -f "$LOCALSTACK_COMPOSE" up -d
         AWS_KEY="test"
         AWS_SECRET="test"
@@ -214,7 +214,7 @@ full_setup() {
     if [[ "$USE_REAL_AWS" == "true" ]]; then
         echo "  AWS:         real credentials (from local environment)"
     else
-        echo "  LocalStack:  http://localhost:4566"
+        echo "  Moto:        http://localhost:5000"
     fi
     echo ""
     echo "  Controller logs:"

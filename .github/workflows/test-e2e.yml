@@ -9,18 +9,12 @@ jobs:
     name: Run on Ubuntu
     runs-on: ubuntu-latest
     services:
-      localstack:
-        image: localstack/localstack:latest
+      moto:
+        image: motoserver/moto:latest
         ports:
-          - 4566:4566
+          - 5000:5000
         env:
-          SERVICES: acm
-          DEFAULT_REGION: us-east-1
-        options: >-
-          --health-cmd "curl -f http://localhost:4566/_localstack/health || exit 1"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
+          MOTO_SERVICE: acm
     steps:
       - name: Clone the code
         uses: actions/checkout@v4
@@ -30,8 +24,10 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Wait for LocalStack
-        run: curl --retry 10 --retry-delay 2 --retry-connrefused http://localhost:4566/_localstack/health
+      - name: Wait for moto
+        run: curl --retry 10 --retry-delay 2 --retry-connrefused http://localhost:5000/moto-api/
 
-      - name: Run LocalStack e2e tests
-        run: go test -tags=e2e -v -count=1 ./test/e2e/ -run LocalStack
+      - name: Run e2e tests
+        env:
+          ACM_ENDPOINT: http://localhost:5000
+        run: go test -tags=e2e -v -count=1 ./test/e2e/acm/

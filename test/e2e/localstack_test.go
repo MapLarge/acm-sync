@@ -11,6 +11,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"math/big"
+	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -22,6 +23,15 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+// acmEndpoint returns the mock ACM endpoint URL.
+// Supports both moto (default :5000) and LocalStack (:4566).
+func acmEndpoint() string {
+	if ep := os.Getenv("ACM_ENDPOINT"); ep != "" {
+		return ep
+	}
+	return "http://localhost:5000"
+}
+
 var _ = Describe("LocalStack ACM Happy Path", func() {
 	It("should import, re-import, and tag a certificate", func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -30,7 +40,7 @@ var _ = Describe("LocalStack ACM Happy Path", func() {
 		cfg, err := awsconfig.LoadDefaultConfig(ctx,
 			awsconfig.WithRegion("us-east-1"),
 			awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("test", "test", "")),
-			awsconfig.WithBaseEndpoint("http://localhost:4566"),
+			awsconfig.WithBaseEndpoint(acmEndpoint()),
 		)
 		Expect(err).NotTo(HaveOccurred())
 

@@ -8,7 +8,7 @@ controller:
   metricsSecure: false
   metricsBindAddress: ":8080"
 
-# LocalStack dummy credentials via secret mount.
+# Moto dummy credentials via secret mount.
 extraEnv:
   - name: AWS_ACCESS_KEY_ID
     valueFrom:
@@ -21,7 +21,7 @@ extraEnv:
         name: aws-localstack-creds
         key: secret-access-key
   - name: AWS_ENDPOINT_URL
-    value: "http://localstack:4566"
+    value: "http://moto:5000"
 
 # Relax security context for local dev (distroless is still non-root).
 podSecurityContext:
