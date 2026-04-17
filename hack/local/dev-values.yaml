@@ -1,0 +1,36 @@
+image:
+  repository: maplarge/acm-sync
+  tag: dev
+  pullPolicy: Never  # Use the image loaded directly into Kind
+
+controller:
+  leaderElect: false
+  metricsSecure: false
+  metricsBindAddress: ":8080"
+
+# LocalStack dummy credentials via secret mount.
+extraEnv:
+  - name: AWS_ACCESS_KEY_ID
+    valueFrom:
+      secretKeyRef:
+        name: aws-localstack-creds
+        key: access-key-id
+  - name: AWS_SECRET_ACCESS_KEY
+    valueFrom:
+      secretKeyRef:
+        name: aws-localstack-creds
+        key: secret-access-key
+  - name: AWS_ENDPOINT_URL
+    value: "http://localstack:4566"
+
+# Relax security context for local dev (distroless is still non-root).
+podSecurityContext:
+  runAsNonRoot: true
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 64Mi

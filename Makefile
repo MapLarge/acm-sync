@@ -1,5 +1,7 @@
+# Version to package
+VERSION = 0.0.1
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= ghcr.io/maplarge/acm-sync:latest
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -111,11 +113,36 @@ helm-lint: ## Lint the Helm chart with all CI value fixtures.
 .PHONY: verify
 verify: fmt vet lint test helm-lint ## Run all verification checks (fmt, vet, lint, test, helm-lint).
 
+.PHONY: local-up
+local-up: ## Create a local Kind cluster with LocalStack and deploy acm-sync.
+	./hack/local/setup.sh
+
+.PHONY: local-up-aws
+local-up-aws: ## Create a local Kind cluster with LocalStack and deploy acm-sync with actual AWS credentials.
+	./hack/local/setup.sh --aws
+
+.PHONY: local-down
+local-down: ## Tear down the local Kind cluster and LocalStack.
+	./hack/local/setup.sh teardown
+
+.PHONY: local-rebuild
+local-rebuild: ## Rebuild the controller image and redeploy to the local cluster.
+	./hack/local/setup.sh rebuild
+
+.PHONY: local-rebuild-aws
+local-rebuild-aws: ## Rebuild the controller image and redeploy to the local cluster.
+	./hack/local/setup.sh rebuild --aws
+
 ##@ Build
 
 .PHONY: build
-build: manifests generate fmt vet ## Build manager binary.
+build: manifests generate fmt vet ## Build manager binary for the host platform.
 	go build -o bin/manager cmd/main.go
+
+.PHONY: build-cross
+build-cross: manifests generate fmt vet ## Build manager binaries for linux/amd64 and linux/arm64.
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o bin/manager-linux-amd64 cmd/main.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -a -o bin/manager-linux-arm64 cmd/main.go
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
@@ -138,7 +165,7 @@ docker-push: ## Push docker image with the manager.
 # - have enabled BuildKit. More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 # - be able to push the image to your registry (i.e. if you do not set a valid value via IMG=<myregistry/image:<tag>> then the export will fail)
 # To adequately provide solutions that are compatible with multiple platforms, you should consider using this option.
-PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
+PLATFORMS ?= linux/arm64,linux/amd64
 .PHONY: docker-buildx
 docker-buildx: ## Build and push docker image for the manager for cross-platform support
 	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile

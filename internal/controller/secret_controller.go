@@ -55,6 +55,7 @@ type SecretReconciler struct {
 
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;patch
 // +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
+// +kubebuilder:rbac:groups=events.k8s.io,resources=events,verbs=create;patch
 
 func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx).WithValues("secret", req.Name, "namespace", req.Namespace)

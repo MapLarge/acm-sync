@@ -1,0 +1,39 @@
+image:
+  repository: maplarge/acm-sync
+  tag: dev
+  pullPolicy: Never
+
+controller:
+  leaderElect: false
+  metricsSecure: false
+  metricsBindAddress: ":8080"
+
+# Real AWS credentials from a Kubernetes secret.
+extraEnv:
+  - name: AWS_ACCESS_KEY_ID
+    valueFrom:
+      secretKeyRef:
+        name: aws-creds
+        key: access-key-id
+  - name: AWS_SECRET_ACCESS_KEY
+    valueFrom:
+      secretKeyRef:
+        name: aws-creds
+        key: secret-access-key
+  - name: AWS_SESSION_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: aws-creds
+        key: session-token
+        optional: true  # Not present for long-lived IAM user keys
+
+podSecurityContext:
+  runAsNonRoot: true
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 64Mi

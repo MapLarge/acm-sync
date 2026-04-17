@@ -61,20 +61,34 @@ If the `arn` annotation is absent, the controller imports a new certificate and 
 
 ### Prerequisites
 
-- Kubernetes 1.28+ (EKS commercial or GovCloud)
+- Kubernetes 1.28+
 - cert-manager installed (or any other source writing `kubernetes.io/tls` Secrets)
-- An IAM role for the controller with IRSA configured
+- AWS credentials available to the controller via any method supported by the SDK v2 default credential chain:
+  - **EKS Pod Identity** (recommended for EKS)
+  - **IRSA** (IAM Roles for Service Accounts, for EKS with OIDC)
+  - **Environment variables** (`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`, for non-EKS clusters)
+  - **EC2 instance metadata** (IMDS, for self-managed clusters on EC2)
+  - **Shared credentials file** (for local development)
 
 ### Installation
 
+The Helm chart is published as an OCI artifact to GitHub Container Registry:
+
 ```bash
-helm install acm-sync ./charts/acm-sync \
+helm install acm-sync oci://ghcr.io/maplarge/charts/acm-sync \
   --namespace acm-sync \
-  --create-namespace \
-  --values values.example.yaml
+  --create-namespace
 ```
 
-See `charts/acm-sync/README.md` for partition-specific values (commercial vs. GovCloud) and FIPS configuration.
+To install a specific version:
+
+```bash
+helm install acm-sync oci://ghcr.io/maplarge/charts/acm-sync --version 1.2.3 \
+  --namespace acm-sync \
+  --create-namespace
+```
+
+See `charts/acm-sync/README.md` for the full values reference, partition-specific examples (commercial vs. GovCloud), FIPS configuration, and authentication setup for EKS Pod Identity, IRSA, and environment variables.
 
 ### IAM Permissions
 
@@ -99,6 +113,83 @@ The controller's IAM role requires:
 ```
 
 `Resource: "*"` is required for `ImportCertificate` without a pre-existing ARN. Once all certs have stable ARNs, you can scope this down to specific ARN prefixes.
+
+### AWS Authentication
+
+The controller uses the AWS SDK v2 default credential chain, which tries the following sources in order:
+
+1. **Environment variables** (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and optionally `AWS_SESSION_TOKEN`)
+2. **Shared credentials file** (`~/.aws/credentials`)
+3. **EKS Pod Identity** (via the Pod Identity Agent injecting container credentials)
+4. **IRSA** (via `AWS_WEB_IDENTITY_TOKEN_FILE` and `AWS_ROLE_ARN` projected by EKS)
+5. **EC2 instance metadata** (IMDS)
+
+No code or configuration changes are needed to switch between methods — the SDK resolves credentials automatically. For production EKS deployments, Pod Identity or IRSA are recommended. Environment variables can be useful for local development or non-EKS clusters.
+
+#### Environment variables
+
+Set credentials directly on the controller pod (e.g., via a Kubernetes Secret mounted as env vars):
+
+```bash
+helm install acm-sync ./charts/acm-sync \
+  --namespace acm-sync --create-namespace \
+  --set-json 'extraEnv=[{"name":"AWS_ACCESS_KEY_ID","valueFrom":{"secretKeyRef":{"name":"aws-creds","key":"access-key-id"}}},{"name":"AWS_SECRET_ACCESS_KEY","valueFrom":{"secretKeyRef":{"name":"aws-creds","key":"secret-access-key"}}}]'
+```
+
+This is the simplest approach for non-EKS clusters or local testing, but requires managing credential rotation yourself.
+
+#### EKS Pod Identity (recommended)
+
+EKS Pod Identity is the newer, simpler approach. It doesn't require an OIDC provider or ServiceAccount annotations — you create an association between the IAM role and the Kubernetes ServiceAccount directly via the EKS API.
+
+1. Create the IAM role with the ACM permissions above and a trust policy for the EKS Pod Identity service principal:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "pods.eks.amazonaws.com"
+      },
+      "Action": [
+        "sts:AssumeRole",
+        "sts:TagSession"
+      ]
+    }
+  ]
+}
+```
+
+2. Create the Pod Identity association:
+
+```bash
+aws eks create-pod-identity-association \
+  --cluster-name MY_CLUSTER \
+  --namespace acm-sync \
+  --service-account acm-sync \
+  --role-arn arn:aws:iam::123456789012:role/acm-sync
+```
+
+3. Install the chart with no ServiceAccount annotations needed:
+
+```bash
+helm install acm-sync ./charts/acm-sync \
+  --namespace acm-sync --create-namespace
+```
+
+#### IRSA (IAM Roles for Service Accounts)
+
+For clusters without Pod Identity support, or when using self-managed OIDC providers:
+
+```bash
+helm install acm-sync ./charts/acm-sync \
+  --namespace acm-sync --create-namespace \
+  --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=arn:aws:iam::123456789012:role/acm-sync
+```
+
+See `charts/acm-sync/README.md` for OIDC trust policy examples for both commercial and GovCloud.
 
 ## AWS Partition Support
 

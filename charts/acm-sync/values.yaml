@@ -12,11 +12,41 @@ fullnameOverride: ""
 serviceAccount:
   create: true
   annotations: {}
-  # For IRSA, set the role ARN:
+  # For IRSA, set the role ARN (not needed for EKS Pod Identity):
   #   eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/acm-sync
   # For GovCloud IRSA:
   #   eks.amazonaws.com/role-arn: arn:aws-us-gov:iam::123456789012:role/acm-sync
   name: ""
+
+# Extra environment variables for the controller container.
+# Useful for passing AWS credentials on non-EKS clusters:
+#   extraEnv:
+#     - name: AWS_ACCESS_KEY_ID
+#       valueFrom:
+#         secretKeyRef:
+#           name: aws-creds
+#           key: access-key-id
+#     - name: AWS_SECRET_ACCESS_KEY
+#       valueFrom:
+#         secretKeyRef:
+#           name: aws-creds
+#           key: secret-access-key
+extraEnv: []
+
+# Extra volume mounts for the controller container.
+# Useful for mounting AWS credentials files or TLS CA bundles:
+#   extraVolumeMounts:
+#     - name: aws-creds
+#       mountPath: /var/run/secrets/aws
+#       readOnly: true
+extraVolumeMounts: []
+
+# Extra volumes for the pod.
+#   extraVolumes:
+#     - name: aws-creds
+#       secret:
+#         secretName: aws-creds
+extraVolumes: []
 
 controller:
   useFIPSEndpoint: false
