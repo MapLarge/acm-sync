@@ -28,3 +28,6 @@ go.work
 
 # Kubeconfig might contain secrets
 *.kubeconfig
+
+# Kubebuilder-generated AI boilerplate (CLAUDE.md is the project-specific replacement)
+AGENTS.md
