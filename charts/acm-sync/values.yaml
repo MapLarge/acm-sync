@@ -1,0 +1,57 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/maplarge/acm-sync
+  tag: ""  # Defaults to appVersion
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  # For IRSA, set the role ARN:
+  #   eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/acm-sync
+  # For GovCloud IRSA:
+  #   eks.amazonaws.com/role-arn: arn:aws-us-gov:iam::123456789012:role/acm-sync
+  name: ""
+
+controller:
+  useFIPSEndpoint: false
+  leaderElect: true
+  metricsBindAddress: ":8080"
+  healthProbeBindAddress: ":8081"
+  metricsSecure: true
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 64Mi
+
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  capabilities:
+    drop:
+      - ALL
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  scrapeTimeout: 10s
+  labels: {}

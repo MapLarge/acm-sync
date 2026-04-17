@@ -102,6 +102,15 @@ lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 lint-config: golangci-lint ## Verify golangci-lint linter configuration
 	"$(GOLANGCI_LINT)" config verify
 
+.PHONY: helm-lint
+helm-lint: ## Lint the Helm chart with all CI value fixtures.
+	helm lint charts/acm-sync/
+	helm lint charts/acm-sync/ -f charts/acm-sync/ci/commercial-values.yaml
+	helm lint charts/acm-sync/ -f charts/acm-sync/ci/govcloud-values.yaml
+
+.PHONY: verify
+verify: fmt vet lint test helm-lint ## Run all verification checks (fmt, vet, lint, test, helm-lint).
+
 ##@ Build
 
 .PHONY: build

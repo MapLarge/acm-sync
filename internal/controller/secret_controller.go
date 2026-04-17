@@ -31,7 +31,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -49,7 +49,7 @@ const requeueInterval = 1 * time.Hour
 type SecretReconciler struct {
 	client.Client
 	Scheme        *runtime.Scheme
-	Recorder      record.EventRecorder
+	Recorder      events.EventRecorder
 	ClientFactory acm.ClientFactory
 }
 
@@ -173,7 +173,7 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	metrics.ReconcileTotal.WithLabelValues("success").Inc()
 	metrics.ReconcileDuration.WithLabelValues().Observe(time.Since(start).Seconds())
 
-	r.Recorder.Eventf(&secret, corev1.EventTypeNormal, "Synced", "Certificate synced to ACM: %s", resultARN)
+	r.Recorder.Eventf(&secret, nil, corev1.EventTypeNormal, "Synced", "ImportCertificate", "Certificate synced to ACM: %s", resultARN)
 	log.Info("reconciliation complete", "arn", resultARN, "hash", hash)
 
 	return ctrl.Result{RequeueAfter: requeueInterval}, nil
@@ -182,7 +182,7 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 func (r *SecretReconciler) recordPermanentError(ctx context.Context, secret *corev1.Secret, msg string) {
 	log := logf.FromContext(ctx).WithValues("secret", secret.Name, "namespace", secret.Namespace)
 	log.Info("permanent error, not requeueing", "error", msg)
-	r.Recorder.Event(secret, corev1.EventTypeWarning, "SyncFailed", msg)
+	r.Recorder.Eventf(secret, nil, corev1.EventTypeWarning, "SyncFailed", "Reconcile", "%s", msg)
 	_ = r.patchAnnotations(ctx, secret, map[string]string{
 		annotations.KeyLastError: msg,
 	})
@@ -304,7 +304,7 @@ func SetupReconciler(mgr ctrl.Manager, factory acm.ClientFactory) error {
 	r := &SecretReconciler{
 		Client:        mgr.GetClient(),
 		Scheme:        mgr.GetScheme(),
-		Recorder:      mgr.GetEventRecorderFor("acm-sync"),
+		Recorder:      mgr.GetEventRecorder("acm-sync"),
 		ClientFactory: factory,
 	}
 	return r.SetupWithManager(mgr)

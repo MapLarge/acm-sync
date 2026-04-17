@@ -120,7 +120,7 @@ func StatusAnnotations(s Status) map[string]string {
 
 func parseCSV(s string) []string {
 	var out []string
-	for _, part := range strings.Split(s, ",") {
+	for part := range strings.SplitSeq(s, ",") {
 		trimmed := strings.TrimSpace(part)
 		if trimmed != "" {
 			out = append(out, trimmed)
@@ -135,7 +135,9 @@ func validateRegion(region string) error {
 		return fmt.Errorf("invalid region %q: unexpected length", region)
 	}
 	for _, c := range region {
-		if !((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-') {
+		isLower := c >= 'a' && c <= 'z'
+		isDigit := c >= '0' && c <= '9'
+		if !isLower && !isDigit && c != '-' {
 			return fmt.Errorf("invalid region %q: contains invalid character %q", region, c)
 		}
 	}
@@ -198,12 +200,10 @@ func PartitionFromRegion(region string) string {
 func parseTags(raw string) (map[string]string, error) {
 	tags := make(map[string]string)
 	for _, pair := range parseCSV(raw) {
-		idx := strings.Index(pair, "=")
-		if idx < 0 {
+		key, value, found := strings.Cut(pair, "=")
+		if !found {
 			return nil, fmt.Errorf("invalid tag %q: must be key=value", pair)
 		}
-		key := pair[:idx]
-		value := pair[idx+1:]
 
 		if key == "" {
 			return nil, fmt.Errorf("invalid tag %q: key cannot be empty", pair)

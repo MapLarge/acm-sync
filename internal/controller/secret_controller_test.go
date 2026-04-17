@@ -133,7 +133,7 @@ var _ = Describe("Secret Controller", func() {
 				g.Expect(s.Annotations[annotations.KeyLastSyncedTime]).NotTo(BeEmpty())
 			}, timeout, interval).Should(Succeed())
 
-			Expect(len(mockACM.ImportCalls)).To(BeNumerically(">=", 1))
+			Expect(mockACM.ImportCalls).NotTo(BeEmpty())
 			Expect(mockACM.ImportCalls[0].ARN).To(BeEmpty())
 
 			Expect(k8sClient.Delete(ctx, secret)).To(Succeed())
@@ -169,7 +169,7 @@ var _ = Describe("Secret Controller", func() {
 				g.Expect(s.Annotations[annotations.KeyLastSyncedHash]).NotTo(BeEmpty())
 			}, timeout, interval).Should(Succeed())
 
-			Expect(len(mockACM.ImportCalls)).To(BeNumerically(">=", 1))
+			Expect(mockACM.ImportCalls).NotTo(BeEmpty())
 			Expect(mockACM.ImportCalls[0].ARN).To(Equal(existingARN))
 
 			Expect(k8sClient.Delete(ctx, secret)).To(Succeed())
@@ -276,7 +276,7 @@ var _ = Describe("Secret Controller", func() {
 			}, timeout, interval).Should(Succeed())
 
 			// No ACM calls should have been made.
-			Expect(len(mockACM.ImportCalls)).To(Equal(0))
+			Expect(mockACM.ImportCalls).To(BeEmpty())
 
 			Expect(k8sClient.Delete(ctx, secret)).To(Succeed())
 		})
@@ -339,7 +339,7 @@ var _ = Describe("Secret Controller", func() {
 				g.Expect(s.Annotations[annotations.KeyLastSyncedARN]).NotTo(BeEmpty())
 			}, timeout, interval).Should(Succeed())
 
-			Expect(len(mockACM.TagCalls)).To(BeNumerically(">=", 1))
+			Expect(mockACM.TagCalls).NotTo(BeEmpty())
 
 			tagCall := mockACM.TagCalls[0]
 			Expect(tagCall.Tags["env"]).To(Equal("prod"))
