@@ -84,6 +84,7 @@ jobs:
       - name: Log in to GHCR (OCI)
         run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
 
+
       - name: Determine chart version
         id: chart-version
         run: |
@@ -114,4 +115,5 @@ jobs:
 
       - name: Push chart to GHCR
         run: |
-          helm push .helm-packages/${{ env.CHART_NAME }}-${{ steps.chart-version.outputs.version }}.tgz oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          helm push .helm-packages/${{ env.CHART_NAME }}-${{ steps.chart-version.outputs.version }}.tgz oci://${{ env.REGISTRY }}/${OWNER}/charts
