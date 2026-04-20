@@ -19,6 +19,8 @@ package main
 import (
 	"crypto/tls"
 	"flag"
+	"fmt"
+	"net/http"
 	"os"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -131,7 +133,14 @@ func main() {
 		setupLog.Error(err, "Failed to set up health check")
 		os.Exit(1)
 	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+	if err := mgr.AddReadyzCheck("readyz", func(req *http.Request) error {
+		select {
+		case <-mgr.Elected():
+			return nil
+		default:
+			return fmt.Errorf("not elected as leader")
+		}
+	}); err != nil {
 		setupLog.Error(err, "Failed to set up ready check")
 		os.Exit(1)
 	}
