@@ -74,27 +74,45 @@ Pod Identity is simpler to set up — no OIDC provider or ServiceAccount annotat
 
 1. Ensure the [EKS Pod Identity Agent add-on](https://docs.aws.amazon.com/eks/latest/userguide/pod-id-agent-setup.html) is installed on your cluster.
 
-2. Create an IAM role with the ACM permissions above and this trust policy:
+2. Create the IAM policy and role, then attach the policy to the role:
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
+```bash
+# Create the policy
+aws iam create-policy \
+  --policy-name acm-sync \
+  --policy-document '{
+    "Version": "2012-10-17",
+    "Statement": [{
       "Effect": "Allow",
-      "Principal": {
-        "Service": "pods.eks.amazonaws.com"
-      },
       "Action": [
-        "sts:AssumeRole",
-        "sts:TagSession"
-      ]
-    }
-  ]
-}
+        "acm:ImportCertificate",
+        "acm:AddTagsToCertificate",
+        "acm:ListTagsForCertificate",
+        "acm:DescribeCertificate"
+      ],
+      "Resource": "*"
+    }]
+  }'
+
+# Create the role with the Pod Identity trust policy
+aws iam create-role \
+  --role-name acm-sync \
+  --assume-role-policy-document '{
+    "Version": "2012-10-17",
+    "Statement": [{
+      "Effect": "Allow",
+      "Principal": { "Service": "pods.eks.amazonaws.com" },
+      "Action": ["sts:AssumeRole", "sts:TagSession"]
+    }]
+  }'
+
+# Attach the policy to the role
+aws iam attach-role-policy \
+  --role-name acm-sync \
+  --policy-arn arn:aws:iam::ACCOUNT_ID:policy/acm-sync
 ```
 
-For GovCloud, the same trust policy applies — the `pods.eks.amazonaws.com` service principal is partition-aware.
+For GovCloud, replace `arn:aws:iam::` with `arn:aws-us-gov:iam::`. The `pods.eks.amazonaws.com` service principal is partition-aware and applies unchanged.
 
 3. Create the association:
 
@@ -124,6 +142,14 @@ helm install acm-sync ./charts/acm-sync \
 ### Option 2: IRSA (IAM Roles for Service Accounts)
 
 Use IRSA when Pod Identity is not available (e.g., self-managed clusters with an OIDC provider, or older EKS platform versions).
+
+Create the policy the same way as shown in the Pod Identity section above. Then create the role with the appropriate trust policy below and attach the policy:
+
+```bash
+aws iam attach-role-policy \
+  --role-name acm-sync \
+  --policy-arn arn:aws:iam::ACCOUNT_ID:policy/acm-sync
+```
 
 #### Commercial OIDC Trust Policy
 
