@@ -17,10 +17,35 @@ permissions:
   packages: write
 
 jobs:
+  # ---------- Detect changed paths (used to gate PR jobs) ----------
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      go: ${{ steps.filter.outputs.go }}
+      chart: ${{ steps.filter.outputs.chart }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            go:
+              - "**/*.go"
+              - "go.mod"
+              - "go.sum"
+              - "Dockerfile"
+            chart:
+              - "charts/**"
+
   # ---------- Build & push Docker image ----------
   docker:
     name: Docker image
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: |
+      github.event_name != 'pull_request' ||
+      needs.changes.outputs.go == 'true'
     outputs:
       version: ${{ steps.meta.outputs.version }}
     steps:
@@ -68,11 +93,29 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # ---------- Helm lint (PR only, chart files changed) ----------
+  helm-lint:
+    name: Helm lint
+    runs-on: ubuntu-latest
+    needs: [changes]
+    if: |
+      github.event_name == 'pull_request' &&
+      needs.changes.outputs.chart == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Lint chart
+        run: helm lint charts/${{ env.CHART_NAME }}/
+
   # ---------- Package & push Helm chart ----------
   helm:
     name: Helm chart
     runs-on: ubuntu-latest
-    needs: docker
+    needs: [docker]
     if: github.event_name != 'pull_request'
     steps:
       - name: Checkout
@@ -83,7 +126,6 @@ jobs:
 
       - name: Log in to GHCR (OCI)
         run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
-
 
       - name: Determine chart version
         id: chart-version
